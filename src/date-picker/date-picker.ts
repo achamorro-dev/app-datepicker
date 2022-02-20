@@ -346,11 +346,6 @@ export class DatePicker extends DatePickerMixin(DatePickerMinMaxMixin(RootElemen
       weekNumberTemplate,
       weekNumberType,
     } = this;
-    const currentDate = _currentDate;
-    const formatters = this.#formatters;
-    const max = _max;
-    const min = _min;
-    const selectedDate = _selectedDate;
     const {
       dayFormat,
       fullDateFormat,
@@ -371,15 +366,15 @@ export class DatePicker extends DatePickerMixin(DatePickerMinMaxMixin(RootElemen
       disabledDatesSet,
       disabledDaysSet,
     } = calendar({
-      date: currentDate,
+      date: _currentDate,
       dayFormat,
       disabledDates: splitString(disabledDates, toResolvedDate),
       disabledDays: splitString(disabledDays, Number),
       firstDayOfWeek,
       fullDateFormat,
       locale,
-      max,
-      min,
+      max: _max,
+      min: _min,
       showWeekNumber,
       weekNumberTemplate,
       weekNumberType,
@@ -389,13 +384,13 @@ export class DatePicker extends DatePickerMixin(DatePickerMinMaxMixin(RootElemen
     <app-month-calendar
       .data=${{
         calendar: calendarMonth,
-        currentDate,
-        date: selectedDate,
+        currentDate: _currentDate,
+        date: _selectedDate,
         disabledDatesSet,
         disabledDaysSet,
-        formatters,
-        max,
-        min,
+        formatters: this.#formatters,
+        max: _max,
+        min: _min,
         selectedDateLabel,
         showWeekNumber,
         todayDate: this.#today,

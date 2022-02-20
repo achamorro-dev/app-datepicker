@@ -1,36 +1,93 @@
-import { MenuSurface } from '@material/mwc-menu/mwc-menu-surface.js';
+import './app-date-picker-input-surface-base.js';
 
-import { appDatePickerName } from '../date-picker/constants.js';
-import { appDatePickerInputName } from '../date-picker-input/constants.js';
-import { ElementMixin } from '../mixins/element-mixin.js';
-import { baseStyling, resetShadowRoot } from '../stylings.js';
-import type { InferredFromSet } from '../typings.js';
-import { DatePickerInputSurfaceStyling } from './stylings.js';
+import { html } from 'lit';
+import { property } from 'lit/decorators/property.js';
 
-const alwaysOpenElementSet = new Set([
-  appDatePickerInputName,
-  appDatePickerName,
-]);
+import { slotDatePicker } from '../helpers/slot-date-picker.js';
+import type { SlotDatePickerInit } from '../helpers/typings.js';
+import { DatePickerMinMaxMixin } from '../mixins/date-picker-min-max-mixin.js';
+import { DatePickerMixin } from '../mixins/date-picker-mixin.js';
+import type { DatePickerMixinProperties } from '../mixins/typings.js';
+import { RootElement } from '../root-element/root-element.js';
 
-export class DatePickerInputSurface extends ElementMixin(MenuSurface) {
-  public static override styles = [
-    ...MenuSurface.styles,
-    baseStyling,
-    resetShadowRoot,
-    DatePickerInputSurfaceStyling,
-  ];
+export class DatePickerInputSurface extends DatePickerMixin(DatePickerMinMaxMixin(RootElement)) implements DatePickerMixinProperties {
+  // public static override styles = [
+  //   ...MenuSurface.styles,
+  //   baseStyling,
+  //   resetShadowRoot,
+  //   DatePickerInputSurfaceBaseStyling,
+  // ];
 
-  protected override onBodyClick(ev: MouseEvent) {
-    const elements =
-      (ev.composedPath() as HTMLElement[])
-        .filter(({ nodeType }) => nodeType === Node.ELEMENT_NODE);
-    const shouldClose =
-      elements.some(n => n.classList.contains('calendar-day')) ||
-      !elements.some(
-        n =>
-          alwaysOpenElementSet.has(n.localName as InferredFromSet<typeof alwaysOpenElementSet>)
-      );
+  @property({ type: Object }) anchor?: HTMLElement;
+  @property({ type: Object }) datePickerDateUpdated?: SlotDatePickerInit['onDatePickerDateUpdated'];
+  @property({ type: Object }) datePickerFirstUpdated?: SlotDatePickerInit['onDatePickerFirstUpdated'];
+  @property({ type: Boolean }) open = false;
 
-    shouldClose && this.close();
+  protected override render() {
+    const {
+      chooseMonthLabel,
+      chooseYearLabel,
+      disabledDates,
+      disabledDays,
+      firstDayOfWeek,
+      landscape,
+      locale,
+      max,
+      min,
+      nextMonthLabel,
+      previousMonthLabel,
+      selectedDateLabel,
+      selectedYearLabel,
+      shortWeekLabel,
+      showWeekNumber,
+      startView,
+      todayDateLabel,
+      todayYearLabel,
+      value,
+      weekLabel,
+      weekNumberTemplate,
+      weekNumberType,
+    } = this;
+
+    return html`
+    <app-date-picker-input-surface-base
+      ?open=${this.open}
+      ?stayOpenOnBodyClick=${true}
+      .anchor=${this as HTMLElement}
+    >${slotDatePicker({
+      chooseMonthLabel,
+      chooseYearLabel,
+      disabledDates,
+      disabledDays,
+      firstDayOfWeek,
+      landscape,
+      locale,
+      max,
+      min,
+      nextMonthLabel,
+      onDatePickerDateUpdated: this.#onDatePickerDateUpdated,
+      onDatePickerFirstUpdated: this.#onDatePickerFirstUpdated,
+      previousMonthLabel,
+      selectedDateLabel,
+      selectedYearLabel,
+      shortWeekLabel,
+      showWeekNumber,
+      startView,
+      todayDateLabel,
+      todayYearLabel,
+      value,
+      weekLabel,
+      weekNumberTemplate,
+      weekNumberType,
+    })}</app-date-picker-input-surface-base>
+    `;
   }
+
+  #onDatePickerDateUpdated: SlotDatePickerInit['onDatePickerDateUpdated'] = (ev) => {
+    return this.datePickerDateUpdated?.(ev);
+  };
+
+  #onDatePickerFirstUpdated: SlotDatePickerInit['onDatePickerFirstUpdated'] = (ev) => {
+    return this.#onDatePickerFirstUpdated?.(ev);
+  };
 }

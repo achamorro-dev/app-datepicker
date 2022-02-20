@@ -1,6 +1,6 @@
 import { css } from 'lit';
 
-export const DatePickerInputSurfaceStyling = css`
+export const DatePickerInputSurfaceBaseStyling = css`
 :host {
   /* mwc-menu-surface CSS Variables: */
   /* --mdc-menu-max-height: 604px */

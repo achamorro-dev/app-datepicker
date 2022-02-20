@@ -25,8 +25,14 @@ import { appDatePickerInputClearLabel, appDatePickerInputType } from './constant
 import { datePickerInputStyling } from './stylings.js';
 
 export class DatePickerInput extends ElementMixin(DatePickerMixin(DatePickerMinMaxMixin(TextField))) implements DatePickerMixinProperties {
-  public override type = appDatePickerInputType;
   public override iconTrailing = 'clear';
+
+  /**
+   * NOTE(motss): Public method to lazy load `app-date-picker-input-surface`.
+   */
+  public lazyLoading?(): Promise<void>;
+
+  public override type = appDatePickerInputType;
 
   public get valueAsDate(): Date | null {
     return this.#valueAsDate || null;
@@ -40,7 +46,8 @@ export class DatePickerInput extends ElementMixin(DatePickerMixin(DatePickerMinM
   @queryAsync('.mdc-text-field__input') protected $input!: Promise<HTMLInputElement | null>;
   @queryAsync(appDatePickerInputSurfaceName) protected $inputSurface!: Promise<AppDatePickerInputSurface | null>;
   @state() private _open = false;
-  @state() private _rendered = false;
+  // @state() private _rendered = false;
+  @state() private _ready = false;
   @state() private _valueText = '';
 
   #disconnect: () => void = () => undefined;
@@ -48,6 +55,7 @@ export class DatePickerInput extends ElementMixin(DatePickerMixin(DatePickerMinM
   #isClearAction = false;
   #picker: AppDatePicker | undefined = undefined;
   #selectedDate: Date | undefined;
+  // #surfaceReady = false;
   #valueAsDate: Date | undefined;
   #valueFormatter = this.$toValueFormatter();
 
@@ -118,15 +126,33 @@ export class DatePickerInput extends ElementMixin(DatePickerMixin(DatePickerMinM
       this.#updateValues(this.value);
     }
 
-    if (!this._rendered && this._open) {
-      this._rendered = true;
-    }
+    // if (!this._rendered && this._open) {
+    //   this._rendered = true;
+    // }
   }
 
   public override render(): TemplateResult {
+    const content = html`
+    <app-date-picker-input-surface
+      @opened=${this.#onOpened}
+      ?open=${this._open}
+      ?stayOpenOnBodyClick=${true}
+      .anchor=${this as HTMLElement}
+      @closed=${this.#onClosed}
+    >${this._open && this._ready ? this.$renderSlot() : nothing}</app-date-picker-input-surface>
+    `;
+
+    if (!globalThis.customElements.get(appDatePickerInputSurfaceName)) {
+      warnUndefinedElement(appDatePickerInputSurfaceName);
+      this._open && this.#lazyLoading();
+    }
+
+    until;
+
+    // ${until(this.$renderContent())}
     return html`
     ${super.render()}
-    ${until(this._rendered ? this.$renderContent() : nothing)}
+    ${content}
     `;
   }
 
@@ -191,25 +217,75 @@ export class DatePickerInput extends ElementMixin(DatePickerMixin(DatePickerMinM
     `;
   }
 
-  protected async $renderContent(): Promise<TemplateResult> {
-    warnUndefinedElement(appDatePickerInputSurfaceName);
+  protected async $renderContent() {
+    // console.debug('0', {
+    //   a: this.#surfaceReady,
+    //   b: this._open,
+    // });
 
-    /**
-     * NOTE(motss): `.updateComplete` is required here to resolve a rendering bug where ripple
-     * inside a `mwc-icon-button` where the ripple appears to be smaller than expected and
-     * is placed at the top-left of its parent.
-     */
-    await this.updateComplete;
+    if (!this._ready && !this._open) return nothing;
 
-    return html`
-    <app-date-picker-input-surface
-      @opened=${this.#onOpened}
-      ?open=${this._open}
-      ?stayOpenOnBodyClick=${true}
-      .anchor=${this as HTMLElement}
-      @closed=${this.#onClosed}
-    >${this.$renderSlot()}</app-date-picker-input-surface>
-    `;
+    // console.debug('1', {
+    //   a: this.#surfaceReady,
+    //   b: this._open,
+    // });
+
+    if (globalThis.customElements.get(appDatePickerInputSurfaceName)) {
+      this._ready = true;
+
+      // console.debug('2', {
+      //   a: this.#surfaceReady,
+      //   b: this._open,
+      // });
+
+      // const surface = await this.$inputSurface;
+      // if (surface) {
+      //   surface.setAttribute('aria-hidden', this._open ? 'false' : 'true');
+      //   surface.setAttribute('aria-expanded', this._open ? 'true' : 'false');
+      // }
+      return html`
+      <app-date-picker-input-surface
+        @opened=${this.#onOpened}
+        ?open=${false}
+        ?stayOpenOnBodyClick=${true}
+        .anchor=${this as HTMLElement}
+        @closed=${this.#onClosed}
+      ></app-date-picker-input-surface>
+      `;
+    } else {
+      this.#lazyLoading();
+
+      return nothing;
+    }
+
+    // if (!this._open) return nothing;
+
+    // warnUndefinedElement(appDatePickerInputSurfaceName);
+
+    // /**
+    //  * NOTE(motss): `.updateComplete` is required here to resolve a rendering bug where ripple
+    //  * inside a `mwc-icon-button` where the ripple appears to be smaller than expected and
+    //  * is placed at the top-left of its parent.
+    //  */
+    // await this.updateComplete;
+
+    // if (!this.#surfaceReady && globalThis.customElements.get(appDatePickerInputSurfaceName)) {
+    //   debugger;
+
+    //   this.#surfaceReady = true;
+
+    //   return html`
+      // <app-date-picker-input-surface
+      //   @opened=${this.#onOpened}
+      //   ?open=${this._open}
+      //   ?stayOpenOnBodyClick=${true}
+      //   .anchor=${this as HTMLElement}
+      //   @closed=${this.#onClosed}
+      // >${this.$renderSlot()}</app-date-picker-input-surface>
+    //   `;
+    // }
+
+    // this.#lazyLoading();
   }
 
   protected $renderSlot(): TemplateResult {
@@ -274,6 +350,54 @@ export class DatePickerInput extends ElementMixin(DatePickerMixin(DatePickerMinM
     });
   }
 
+  async #lazyLoading(): Promise<void> {
+    console.debug('lazyLoading');
+
+    const task = globalThis.customElements.whenDefined(appDatePickerInputSurfaceName);
+
+    await this.lazyLoading?.();
+    await task;
+
+    console.debug(globalThis.customElements.get(appDatePickerInputSurfaceName));
+
+    // if (this.lazyLoading == null) {
+    //   warnUndefinedElement(appDatePickerInputSurfaceName);
+    // } else {
+
+    //   await this.lazyLoading();
+
+    //   this.requestUpdate();
+
+    //   // console.debug('1');
+
+    //   // await this.updateComplete;
+
+    //   // console.debug('2');
+
+    //   // this.requestUpdate();
+    //   // await this.updateComplete;
+
+      const inputSurface = (await this.$inputSurface);
+
+    //   inputSurface?.requestUpdate();
+    //   inputSurface?.requestUpdate();
+    //   inputSurface?.requestUpdate();
+
+    //   this.requestUpdate();
+    //   this.requestUpdate();
+    //   this.requestUpdate();
+
+      this._ready = true;
+
+      await inputSurface?.updateComplete;
+      await this.updateComplete;
+
+      console.debug('3', inputSurface);
+
+      // inputSurface?.show();
+    // }
+  }
+
   #onResetClick()  {
     this.#isClearAction = true;
     this.#selectedDate = this.#valueAsDate = undefined;
@@ -310,7 +434,7 @@ export class DatePickerInput extends ElementMixin(DatePickerMixin(DatePickerMinM
 
       if (!isKeypress || (key === keyEnter || key === keySpace)) {
         this.value = toDateString(this.#selectedDate);
-        isKeypress && (await this.$inputSurface)?.close();
+        // isKeypress && (await this.$inputSurface)?.close();
       }
     } else {
       this.#isClearAction = false;

@@ -1,6 +1,6 @@
 import '../date-picker-dialog/app-date-picker-dialog.js';
-import '../date-picker-input-surface/app-date-picker-input-surface.js';
 import '../date-picker-input/app-date-picker-input.js';
+// import '../date-picker-input-surface/app-date-picker-input-surface.js';
 import '../date-picker/app-date-picker.js';
 
 import { css, html } from 'lit';
@@ -90,6 +90,10 @@ export class DemoApp extends RootElement {
       .max=${'2100-12-31'}
       .min=${'1970-01-01'}
       .value=${'2020-02-02'}
+      .lazyLoading=${async () => {
+        console.debug('lazy loading app-date-picker-input-surface...');
+        await import('../date-picker-input-surface/app-date-picker-input-surface.js');
+      }}
     ></app-date-picker-input>
 
     <button data-id="datePickerDialog1" @click=${this.#showDialog}>Open</button>
